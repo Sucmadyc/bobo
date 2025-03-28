@@ -15,11 +15,12 @@ jobs:
     timeout-minutes: 15
 
     steps:
-      # 步骤1：检出代码库
+      # 步骤1：检出代码库（使用完整历史记录）
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          persist-credentials: false
+          fetch-depth: 0  # 获取完整历史记录
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       # 步骤2：设置Node.js环境
       - name: Setup Node.js
@@ -32,18 +33,18 @@ jobs:
       - name: Install Obfuscator
         run: |
           echo "安装javascript-obfuscator..."
-          npm install -g javascript-obfuscator@4.0.0
+          npm install -g javascript-obfuscator@latest
           javascript-obfuscator --version
 
       # 步骤4：下载并处理Worker文件
       - name: Process Worker File
         run: |
           echo "下载源文件..."
-          curl -f -S -s -o origin.js \
-            https://raw.githubusercontent.com/bia-pain-bache/BPB-Worker-Panel/main/build/unobfuscated-worker.js || {
-            echo "下载失败！"
+          if ! curl -f -S -s -o origin.js \
+            https://raw.githubusercontent.com/bia-pain-bache/BPB-Worker-Panel/main/build/unobfuscated-worker.js; then
+            echo "::error::下载源文件失败！"
             exit 1
-          }
+          fi
 
           echo "开始代码混淆..."
           javascript-obfuscator origin.js --output _worker.js \
@@ -60,19 +61,27 @@ jobs:
             --transform-object-keys true \
             --unicode-escape-sequence true
 
-          # 验证输出文件
           if [ ! -f "_worker.js" ]; then
-            echo "混淆失败！未生成输出文件"
+            echo "::error::混淆失败！未生成输出文件"
             exit 1
           fi
           echo "混淆完成！"
 
-      # 步骤5：提交变更
+      # 步骤5：配置Git
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global --add safe.directory /github/workspace
+
+      # 步骤6：提交变更
       - name: Commit Changes
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
-          branch: main
-          commit_message: "🔄 Automated Obfuscation Update"
-          commit_user_name: "BPB Automation"
-          commit_user_email: "automation@bpb.panel"
-          commit_author: "BPB Automation <automation@bpb.panel>"
+          commit_message: "🔄 Automated Obfuscation Update (${{ github.run_id }})"
+          commit_user_name: "github-actions[bot]"
+          commit_user_email: "github-actions[bot]@users.noreply.github.com"
+          commit_author: "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+          add_options: "-f"
+          skip_checkout: true
+          skip_fetch: true
