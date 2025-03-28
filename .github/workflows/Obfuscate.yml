@@ -4,7 +4,7 @@ on:
   push:
     branches: [main]
   schedule:
-    - cron: "0 1 * * *"  # Daily at 1:00 AM
+    - cron: "0 1 * * *"  # 每天凌晨1点运行
 
 permissions:
   contents: write
@@ -12,31 +12,36 @@ permissions:
 jobs:
   obfuscate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10  # Prevents hanging jobs
+    timeout-minutes: 10  # 防止任务卡住
 
     steps:
       - uses: actions/checkout@v4
         
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"  # Stable LTS version
+          node-version: "20"  # 使用稳定的LTS版本
 
       - run: npm install -g javascript-obfuscator
 
       - name: Download and obfuscate
         run: |
+          # 使用curl更可靠地下载文件
           curl -s -o origin.js https://raw.githubusercontent.com/bia-pain-bache/BPB-Worker-Panel/main/build/unobfuscated-worker.js
+          
+          # 执行混淆（保留所有原始参数）
           javascript-obfuscator origin.js --output _worker.js \
             --compact true \
             --control-flow-flattening true \
+            --control-flow-flattening-threshold 1 \
             --dead-code-injection true \
+            --dead-code-injection-threshold 1 \
             --identifier-names-generator hexadecimal \
             --rename-globals true \
             --string-array true \
             --string-array-encoding rc4 \
+            --string-array-threshold 1 \
             --transform-object-keys true \
-            --unicode-escape-sequence true \
-            --threshold 1  # Applies to all thresholds
+            --unicode-escape-sequence true
 
       - uses: stefanzweifel/git-auto-commit-action@v5
         with:
