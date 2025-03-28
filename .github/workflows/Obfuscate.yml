@@ -12,23 +12,24 @@ permissions:
 jobs:
   obfuscate:
     runs-on: ubuntu-latest
-    timeout-minutes: 10  # 防止任务卡住
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4
-        
+        with:
+          fetch-depth: 0  # 获取完整git历史
+
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"  # 使用稳定的LTS版本
+          node-version: "20"
+          cache: "npm"
 
-      - run: npm install -g javascript-obfuscator
+      - name: Install obfuscator
+        run: npm install -g javascript-obfuscator@latest
 
-      - name: Download and obfuscate
+      - name: Download and process
         run: |
-          # 使用curl更可靠地下载文件
           curl -s -o origin.js https://raw.githubusercontent.com/bia-pain-bache/BPB-Worker-Panel/main/build/unobfuscated-worker.js
-          
-          # 执行混淆（保留所有原始参数）
           javascript-obfuscator origin.js --output _worker.js \
             --compact true \
             --control-flow-flattening true \
@@ -47,5 +48,6 @@ jobs:
         with:
           branch: main
           commit_message: '🔧 Update obfuscated worker'
-          commit_author_name: 'github-actions[bot]'
-          commit_author_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_user_name: 'github-actions[bot]'
+          commit_user_email: 'github-actions[bot]@users.noreply.github.com'
+          commit_author: 'github-actions[bot] <github-actions[bot]@users.noreply.github.com>'
